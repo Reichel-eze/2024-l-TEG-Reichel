@@ -232,7 +232,81 @@ puedeAtacarPais(Jugador, PaisAtacado) :-
 %    Jugador \= OtroJugador,
 %    not(aliados(Jugador,OtroJugador)).
     
+% 5) elQueTieneMasEjercitos/2 que relaciona un jugador y un país si se cumple que en ese país hay más ejércitos que en los países del resto del mundo y a su vez ese país es ocupado por ese jugador.
+% Ejemplo para el/los caso/s de prueba: El que tiene más ejércitos es el amarillo, en canadá.
 
-    
-    
+elQueTieneMasEjercitos(Jugador, Pais) :-
+    ocupa(Pais,Jugador,Ejercito),
+    forall((ocupa(OtroPais,_,OtroEjercito), Pais \= OtroPais), OtroEjercito < Ejercito).
+    % para todos los demas paises ocupados (sin considerar al pais con mayor ejercito), estos tienen un ejercito menor 
 
+% DUDA, NOSE SI LOS PAISES A CONSIDERAR LA CONDICION SON PAISES OCUPADOS POR EL JUGADOR (A SIMPLE VISTA LA COMPARACION ES CON EL RESTO DE PAISES DEL MUNDO)
+
+% ?- elQueTieneMasEjercitos(amarillo,canada).
+% true.
+
+% 6)
+%objetivo(Jugador, objetivoQueQuiereCumplir).
+objetivo(amarillo, ocuparContinente(asia)).
+objetivo(amarillo,ocuparPaises(2, americaDelSur)). 
+objetivo(blanco, destruirJugador(negro)). 
+objetivo(magenta, destruirJugador(blanco)). 
+objetivo(negro, ocuparContinente(oceania)).
+objetivo(negro,ocuparContinente(americaDelSur)). 
+
+% cumpleObjetivos/1 que se cumple para un jugador si cumple todos los objetivos que tiene.
+%Los objetivos se cumplen de la siguiente forma:
+% - ocuparContinente: el jugador debe ocupar el continente indicado
+% - ocuparPaises: el jugador debe ocupar al menos la cantidad de países indicada de ese continente
+% - destruirJugador: se cumple si el jugador indicado ya no ocupa ningún país
+%Pensar el/los caso/s de prueba necesario/s.  
+
+cumpleObjetivos(Jugador) :-
+    jugador(Jugador),
+    forall(objetivo(Jugador, Objetivo), cumplirObjetivo(Jugador, Objetivo)).
+
+cumplirObjetivo(Jugador, ocupaContinente(Continente)) :- ocupaContinente(Jugador, Continente).
+
+cumplirObjetivo(Jugador, ocuparPaises(Cantidad,Continente)) :- 
+    findall(Pais,(estaEn(Continente,Pais), puedeAtacarPais(Jugador,Pais)), ListaDePaises),
+    length(ListaDePaises, CantidadDePaises),
+    CantidadDePaises >= Cantidad.
+    
+cumplirObjetivo(_, destruirJugador(JugadorADestruir)) :- loLiquidaron(JugadorADestruir).
+
+% ?- cumpleObjetivos(Jugador).
+% Jugador = magenta.
+
+% 7) leInteresa/2 que relaciona un jugador y un continente, y es cierto cuando alguno de sus objetivos implica hacer 
+% algo en ese continente (en el caso de destruirJugador, si el jugador a destruir ocupa algún país del continente).
+
+leInteresa(Jugador, Continente) :-
+    objetivo(Jugador,_),
+    algoEnElContinente(Jugador, Continente).
+
+algoEnElContinente(Jugador, Continente) :- objetivo(Jugador,ocuparContinente(Continente)).
+algoEnElContinente(Jugador, Continente) :- objetivo(Jugador,ocuparPaises(_,Continente)).
+algoEnElContinente(Jugador, Continente) :- objetivo(Jugador,destruirJugador(OtroJugador)), tienePresenciaEn(OtroJugador,Continente).
+
+% ?- leInteresa(amarillo, X).
+% X = asia ;
+% X = americaDelSur ; 
+% X = asia ;
+% X = americaDelSur ; 
+
+% ?- leInteresa(blanco, X).
+% X = americaDelSur ; 
+% X = asia ;
+% X = oceania ; 
+% X = oceania ;
+% X = oceania ;
+% X = oceania.
+
+% ?- leInteresa(magenta, X).
+% false.
+
+% ?- leInteresa(negro,X).
+% X = oceania ;
+% X = americaDelSur ;
+% X = oceania ;
+% X = americaDelSur ;
